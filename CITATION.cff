@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "Si vous utilisez ce code ou ces figures, citez le logiciel ci-dessous."
+type: software
+title: "efficient-frontier-mpt : frontière efficiente, Monte Carlo, frontière rééchantillonnée et backtest hors échantillon sur FNB américains et canadiens"
+version: 1.0.0
+date-released: 2026-08-23
+license: MIT
+repository-code: "https://github.com/Guilou001/efficient-frontier-mpt"
+authors:
+  - family-names: Vaudescal
+    given-names: Guillaume
+keywords:
+  - modern portfolio theory
+  - efficient frontier
+  - Markowitz
+  - Monte Carlo
+  - Ledoit-Wolf
+  - resampled frontier
+  - ETF
+  - Canada
+preferred-citation:
+  type: article
+  title: "Portfolio Selection"
+  authors:
+    - family-names: Markowitz
+      given-names: Harry
+  journal: "The Journal of Finance"
+  volume: 7
+  issue: 1
+  start: 77
+  end: 91
+  year: 1952
+  doi: 10.2307/2975974

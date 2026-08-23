@@ -1,0 +1,20 @@
+# Environnements et caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store
+dist/
+build/
+*.egg-info/
+
+# Données brutes : prix Yahoo Finance (usage personnel, non redistribués), CSV des taux ; voir scripts/fetch_data.py
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/README.md
+
+# Sorties de la démo synthétique (CI) et fichiers temporaires
+results/demo/
+*.tmp

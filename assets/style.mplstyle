@@ -1,0 +1,28 @@
+# Style commun des figures : palette Okabe-Ito (daltonisme), polices DejaVu/STIX, export vectoriel propre.
+axes.prop_cycle : cycler('color', ['0072B2', 'E69F00', '009E73', 'D55E00', 'CC79A7', '56B4E9', 'F0E442', '000000', '999999', '882255', '44AA99'])
+font.family : sans-serif
+font.sans-serif : DejaVu Sans, Arial, Helvetica
+mathtext.fontset : stix
+font.size : 9
+axes.titlesize : 10
+axes.labelsize : 9
+legend.fontsize : 8
+xtick.labelsize : 8
+ytick.labelsize : 8
+axes.spines.top : False
+axes.spines.right : False
+axes.grid : True
+grid.color : DDDDDD
+grid.linewidth : 0.5
+axes.axisbelow : True
+lines.linewidth : 1.6
+lines.markersize : 5
+legend.frameon : False
+figure.figsize : 6.4, 4.2
+figure.dpi : 110
+savefig.dpi : 200
+savefig.bbox : tight
+savefig.pad_inches : 0.03
+pdf.fonttype : 42
+ps.fonttype : 42
+svg.fonttype : none

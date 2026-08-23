@@ -1,0 +1,130 @@
+{
+  "label": "FNB américains multi-actifs (USD)",
+  "estimator": "ledoit_wolf",
+  "n_assets": 11,
+  "assets": [
+    "SPY",
+    "IWM",
+    "EFA",
+    "EEM",
+    "TLT",
+    "IEF",
+    "LQD",
+    "HYG",
+    "GLD",
+    "DBC",
+    "VNQ"
+  ],
+  "period": "2008-01 à 2026-07",
+  "n_months": 223,
+  "rf_annual_mean": 0.013761356665125124,
+  "shrinkage": 0.08475631570536786,
+  "n_sim": 50000,
+  "seed": 123,
+  "n_boot": 200,
+  "special_portfolios": {
+    "min_variance": {
+      "ret": 0.03343371276089013,
+      "vol": 0.055582942545122575,
+      "sharpe": 0.353927935351657
+    },
+    "tangency": {
+      "ret": 0.09216046130356041,
+      "vol": 0.09899849201906019,
+      "sharpe": 0.7919222105256017
+    },
+    "max_diversification": {
+      "ret": 0.047160775824504717,
+      "vol": 0.08282439645123309,
+      "sharpe": 0.4032558109740665
+    },
+    "inverse_vol": {
+      "ret": 0.058464861404301544,
+      "vol": 0.08980186698039452,
+      "sharpe": 0.4978015072775275
+    },
+    "equal_weight": {
+      "ret": 0.0653869406992635,
+      "vol": 0.1076581498922017,
+      "sharpe": 0.47953252109414074
+    }
+  },
+  "montecarlo": [
+    {
+      "sampling": "dirichlet",
+      "n_sim": 50000,
+      "mc_best_sharpe": 0.724713936830953,
+      "tangency_sharpe": 0.7919222105256017,
+      "sharpe_gap": 0.06720827369464877,
+      "mc_min_vol": 0.0618164016688896,
+      "min_var_vol": 0.055582942545122575,
+      "mc_max_ret": 0.10319541101083742,
+      "frontier_max_ret": 0.11887655280390068,
+      "vol_gap_median": 0.039750184082132226,
+      "vol_gap_p05": 0.02149301443723594,
+      "share_within_1pct_vol": 0.00094,
+      "max_weight_median": 0.2618373531331324,
+      "max_weight_p99": 0.5035234943133732,
+      "share_max_weight_above_50pct": 0.01084
+    },
+    {
+      "sampling": "uniform",
+      "n_sim": 50000,
+      "mc_best_sharpe": 0.6728142726748155,
+      "tangency_sharpe": 0.7919222105256017,
+      "sharpe_gap": 0.11910793785078622,
+      "mc_min_vol": 0.07318479986764617,
+      "min_var_vol": 0.055582942545122575,
+      "mc_max_ret": 0.0958401049045661,
+      "frontier_max_ret": 0.11887655280390068,
+      "vol_gap_median": 0.0384722173685619,
+      "vol_gap_p05": 0.025558343429099146,
+      "share_within_1pct_vol": 2e-05,
+      "max_weight_median": 0.16662101461937362,
+      "max_weight_p99": 0.2562794177815696,
+      "share_max_weight_above_50pct": 0.0
+    }
+  ],
+  "oos_period": "2013-01 à 2026-07",
+  "oos_sharpe": {
+    "max_sharpe/sample": 0.7666928671485609,
+    "min_variance/sample": 0.24075173657317553,
+    "inverse_vol/aucun": 0.46839225354604686,
+    "equal_weight/aucun": 0.5055145934198241,
+    "max_sharpe/ledoit_wolf": 0.6859960893340574,
+    "min_variance/ledoit_wolf": 0.20324492495871707
+  },
+  "figures": {
+    "cloud_dirichlet": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/cloud_dirichlet_ledoit_wolf.png",
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/cloud_dirichlet_ledoit_wolf.pdf"
+    ],
+    "cloud_uniform": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/cloud_uniform_ledoit_wolf.png",
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/cloud_uniform_ledoit_wolf.pdf"
+    ],
+    "transition_map": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/transition_map_ledoit_wolf.png",
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/transition_map_ledoit_wolf.pdf"
+    ],
+    "corr_heatmap": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/corr_heatmap_ledoit_wolf.png",
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/corr_heatmap_ledoit_wolf.pdf"
+    ],
+    "resampled": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/resampled_vs_analytical_ledoit_wolf.png",
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/resampled_vs_analytical_ledoit_wolf.pdf"
+    ],
+    "oos_growth": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/oos_growth.png",
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/oos_growth.pdf"
+    ],
+    "oos_weights": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/oos_weights_ledoit_wolf.png",
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/oos_weights_ledoit_wolf.pdf"
+    ],
+    "interactive": [
+      "/Users/guilou/Developer/experiments/Code/08 - Portfolio/Finance/01 - Gestionnaire de portefeuille/efficient-frontier-mpt/results/figures/us/cloud_interactive_ledoit_wolf.html"
+    ]
+  }
+}

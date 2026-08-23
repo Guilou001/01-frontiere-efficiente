@@ -1,0 +1,12 @@
+asset,description,mean_annual,vol_annual,sharpe_annual
+SPY,S&P 500,0.118877,0.156904,0.669932
+IWM,Russell 2000,0.107815,0.207385,0.453524
+EFA,MSCI EAFE,0.061633,0.175851,0.272229
+EEM,MSCI marchés émergents,0.056481,0.210255,0.203180
+TLT,Trésor américain 20 ans et plus,0.033648,0.142733,0.139329
+IEF,Trésor américain 7-10 ans,0.030134,0.067069,0.244118
+LQD,obligations corporatives investment grade,0.042746,0.083478,0.347208
+HYG,obligations à haut rendement,0.054125,0.102253,0.394738
+GLD,or physique,0.096458,0.174894,0.472838
+DBC,panier de matières premières,0.024950,0.191882,0.058310
+VNQ,FPI américaines,0.092390,0.221893,0.354353

@@ -1,0 +1,12 @@
+asset,description,mean_annual,vol_annual,sharpe_annual
+XIU.TO,S&P/TSX 60,0.099454,0.115780,0.725741
+XSP.TO,S&P 500 couvert en CAD,0.129372,0.141585,0.804769
+XIN.TO,MSCI EAFE couvert en CAD,0.091205,0.122742,0.617373
+XEM.TO,MSCI marchés émergents,0.068506,0.142175,0.373332
+XBB.TO,obligations canadiennes univers,0.026798,0.049333,0.230471
+XCB.TO,obligations corporatives canadiennes,0.034273,0.050980,0.369662
+XRB.TO,obligations à rendement réel,0.017568,0.081371,0.026298
+XHY.TO,haut rendement américain couvert en CAD,0.046410,0.082918,0.373643
+ZRE.TO,FPI canadiennes équipondérées,0.083501,0.144867,0.469898
+CGL.TO,or physique couvert en CAD,0.070464,0.167850,0.327885
+XEG.TO,énergie canadienne (S&P/TSX plafonné),0.091604,0.292357,0.260556

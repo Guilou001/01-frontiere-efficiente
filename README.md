@@ -5,7 +5,7 @@ Markowitz (1952) et Sharpe (1964, 1966) appliqués à 11 FNB américains multi-a
 la frontière rééchantillonnée de Michaud (1998) et la comparaison hors échantillon à l'équipondéré de DeMiguel,
 Garlappi et Uppal (2009).
 
-[![ci](https://github.com/Guilou001/efficient-frontier-mpt/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilou001/efficient-frontier-mpt/actions/workflows/ci.yml)
+[![ci](https://github.com/Guilou001/01-efficient-frontier-mpt/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilou001/01-efficient-frontier-mpt/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
 ![licence](https://img.shields.io/badge/code-MIT-green)
 ![figures](https://img.shields.io/badge/figures%20et%20texte-CC%20BY%204.0-lightgrey)

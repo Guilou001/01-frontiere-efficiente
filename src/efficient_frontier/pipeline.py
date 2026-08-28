@@ -112,10 +112,11 @@ def run_pipeline(
 
     # 7. figures
     figs: dict[str, list[str]] = {}
+    n_sim_txt = f"{n_sim:,}".replace(",", " ")
     for s, mc in mc_results.items():
         figs[f"cloud_{s}"] = [str(p) for p in plots.plot_cloud(
             mc, fr, special, asset_stats, rf_a, out_figures / f"cloud_{s}_{tag}",
-            title=f"{title_base}\n{n_sim:,} portefeuilles aléatoires, tirage {s}".replace(f"{n_sim:,}", f"{n_sim:,}".replace(",", " ")),
+            title=f"{title_base}\n{n_sim_txt} portefeuilles aléatoires, {plots.SAMPLING_LABELS[s]}",
             unconstrained=unconstrained)]
     figs["transition_map"] = [str(p) for p in plots.plot_transition_map(
         fr, out_figures / f"transition_map_{tag}", title=f"Carte de transition de la frontière long-only\n{title_base}",
@@ -128,7 +129,9 @@ def run_pipeline(
         {est: bt.returns_net for est, bt in backtests.items()}, out_figures / "oos_growth",
         title=f"Hors échantillon, fenêtre {window} mois, rééquilibrage mensuel\n{label}, {oos['period'].iloc[0]}", cost_bps=cost_bps)]
     figs["oos_weights"] = [str(p) for p in plots.plot_rolling_weights(
-        backtests[estimator].weights, out_figures / f"oos_weights_{tag}", title=f"Poids glissants hors échantillon, {title_base}")]
+        backtests[estimator].weights, out_figures / f"oos_weights_{tag}",
+        title=f"Poids glissants hors échantillon, {label}, {oos['period'].iloc[0]}, "
+              f"estimateur {plots.ESTIMATOR_LABELS[estimator]}")]
     figs["interactive"] = [str(plots.plotly_cloud(mc_results["dirichlet"], fr, special, asset_stats, rf_a,
                                                    out_figures / f"cloud_interactive_{tag}.html", title=title_base,
                                                    max_points=max_interactive_points, seed=seed))]

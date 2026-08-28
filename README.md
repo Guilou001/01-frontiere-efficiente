@@ -10,10 +10,12 @@ Garlappi et Uppal (2009).
 ![licence](https://img.shields.io/badge/code-MIT-green)
 ![figures](https://img.shields.io/badge/figures%20et%20texte-CC%20BY%204.0-lightgrey)
 
-**Résultat en une phrase.** Sur 50 000 portefeuilles aléatoires, le meilleur ratio de Sharpe simulé plafonne à
-0,73 contre 0,80 pour le portefeuille de tangence calculé par programme quadratique (FNB américains, 2008-2026) ;
-hors échantillon, net de 10 points de base par rotation, le portefeuille de Sharpe maximal bat l'équipondéré aux
-États-Unis (Sharpe 0,77 contre 0,51, 2013-2026) et perd au Canada (0,62 contre 0,73, 2016-2026).
+**Résultat en une phrase.** Sur 50 000 portefeuilles aléatoires, le meilleur ratio de Sharpe, le rendement
+excédant le taux sans risque par unité de volatilité, plafonne à 0,73 contre 0,80 pour le portefeuille de
+tangence, le portefeuille de la frontière où ce ratio est maximal, calculé par programme quadratique
+(FNB américains, 2008-2026) ; hors échantillon, net de 10 points de base par rotation, le portefeuille de Sharpe
+maximal bat l'équipondéré aux États-Unis (Sharpe 0,77 contre 0,51, 2013-2026) et perd au Canada (0,62 contre
+0,73, 2016-2026).
 
 *English summary.* Modern Portfolio Theory on two ETF universes: 11 US multi-asset ETFs (2008-01 to 2026-07,
 223 months) and 11 Canadian ETFs in CAD (2011-01 to 2026-07, 187 months). Long-only efficient frontier by
@@ -28,18 +30,25 @@ Ledoit-Wolf inputs do not rescue max-Sharpe (0.69 US, 0.57 Canada). All numbers 
 
 ![Nuage Monte Carlo et frontière efficiente, FNB américains](results/figures/us/cloud_dirichlet_sample.png)
 
-*Figure 1. FNB américains, 2008-01 à 2026-07, moments échantillon. 50 000 portefeuilles long-only tirés d'une
-loi Dirichlet(1), colorés par ratio de Sharpe. Frontière long-only (trait noir), frontière sans contrainte de
+*Figure 1. FNB américains, 2008-01 à 2026-07, moments échantillon. 50 000 portefeuilles long-only, c'est-à-dire
+sans vente à découvert, tirés d'une loi de Dirichlet(1), la loi uniforme sur le simplexe des poids positifs de
+somme un, et colorés par ratio de Sharpe. Frontière long-only (trait noir), frontière sans contrainte de
 signe (pointillé gris), portefeuille de variance minimale (carré), portefeuille de tangence (étoile, Sharpe 0,80),
-droite de marché des capitaux (tirets), les 11 FNB (losanges). Le nuage reste loin des deux extrémités de la
-frontière (section 5.2). Version interactive, survol = poids : `results/figures/us/cloud_interactive_sample.html`.*
+droite de marché des capitaux (tirets), les 11 FNB (losanges). Version interactive, survol = poids :
+`results/figures/us/cloud_interactive_sample.html`.*
+
+Comment lire cette figure : chaque point est un portefeuille simulé, placé par sa volatilité (axe horizontal) et
+son rendement espéré (axe vertical), puis coloré par son ratio de Sharpe ; à volatilité égale, plus haut est
+mieux. Le trait noir est la limite atteignable sans vente à découvert : aucun point ne la franchit, et l'écart
+entre le nuage et ses deux extrémités est mesuré en section 5.2.
 
 ## 1. Ce que c'est, ce que ce n'est pas
 
 C'est une mise en œuvre complète et testée de la théorie moderne du portefeuille sur des données publiques,
 avec des paquets Python courants (numpy, pandas, scipy, cvxpy, matplotlib, seaborn, plotly, yfinance) et des
-résultats mesurés plutôt que racontés. Les paramètres (fenêtre de 60 mois, 10 points de base, graine 123, 50 000
-tirages, 200 bootstraps) sont fixés avant l'exécution et ne sont pas ajustés après coup. La partie dans
+résultats mesurés plutôt que racontés. Les paramètres sont fixés avant l'exécution et ne sont pas ajustés après
+coup : fenêtre de 60 mois, 10 points de base, graine 123, 50 000 tirages, 200 bootstraps, le bootstrap étant un
+rééchantillonnage avec remise des mois observés. La partie dans
 l'échantillon (sections 5.1 à 5.4) et la partie hors échantillon (section 5.5) sont séparées une fois pour toutes.
 
 Ce n'est pas un conseil d'investissement, ni une étude des rendements futurs. Les frontières sont calculées sur
@@ -109,16 +118,18 @@ Choix qui comptent :
    paramètres et résolu pour 60 cibles de rendement entre le minimum de variance et l'actif le plus rentable.
    La tangence long-only passe par la transformation de Charnes-Cooper (minimiser y'Σy sous (μ - r)'y = 1,
    y ≥ 0, puis normaliser), qui en fait un QP exact plutôt qu'une recherche non convexe.
-3. Deux tirages de poids pour le Monte Carlo : Dirichlet(1, …, 1), loi uniforme sur le simplexe, et vecteur
+3. Deux tirages de poids pour le Monte Carlo : Dirichlet(1, …, 1), définie sous la figure 1, et vecteur
    uniforme normalisé par sa somme, qui se concentre autour de 1/N. Les deux sont vectorisés (un produit
    matriciel et un `einsum`, aucune boucle sur les portefeuilles).
-4. Frontière rééchantillonnée : 200 bootstraps i.i.d. des mois, ré-estimation, frontière à 30 rangs, moyenne
-   des poids par rang, statistiques évaluées sous les moments d'origine.
+4. Frontière rééchantillonnée : 200 bootstraps i.i.d. des mois, les tirages étant indépendants et identiquement
+   distribués, ré-estimation, frontière à 30 rangs, moyenne des poids par rang, statistiques évaluées sous les
+   moments d'origine.
 5. Backtest glissant : à chaque fin de mois, moments estimés sur les 60 mois précédents, poids cibles tenus le
    mois suivant, dérive des poids entre deux rééquilibrages, coût de 10 points de base par unité de rotation
    aller simple. Quatre règles : Sharpe maximal, variance minimale, inverse de la volatilité, 1/N ; les deux
-   premières sous moments échantillon et sous Ledoit-Wolf. TCAC en années civiles (jours / 365,25), Sharpe sur
-   rendements excédentaires mensuels × √12, perte maximale sur la richesse cumulée, rotation annuelle moyenne.
+   premières sous moments échantillon et sous Ledoit-Wolf. TCAC, le taux de croissance annuel composé, en années
+   civiles (jours / 365,25) ; Sharpe sur rendements excédentaires mensuels × √12 ; perte maximale sur la richesse
+   cumulée ; rotation annuelle moyenne.
 
 ## 5. Résultats (mesurés, copiés de `results/tables/`)
 
@@ -147,7 +158,11 @@ investisseur en FNB ne fait pas.
 ![Carte de transition, FNB américains](results/figures/us/transition_map_sample.png)
 
 *Figure 2. Poids le long de la frontière long-only américaine en fonction de la volatilité cible : IEF domine le
-bas de la frontière, SPY et GLD le haut ; IWM, EFA, EEM, LQD et VNQ n'apparaissent nulle part.*
+bas de la frontière, SPY et GLD le haut. La légende ne liste que les FNB dont le poids dépasse 0,5 % quelque part
+sur la frontière ; IWM, EFA, EEM, LQD et VNQ, jamais retenus par l'optimiseur, en sont exclus.*
+
+Comment lire cette figure : chaque bande verticale est un portefeuille de la frontière, les aires empilées sont
+ses poids et somment à 100 % ; on lit à volatilité fixée quelles classes composent le portefeuille.
 
 ### 5.2 Le nuage Monte Carlo n'atteint jamais les extrémités de la frontière
 
@@ -159,6 +174,17 @@ bas de la frontière, SPY et GLD le haut ; IWM, EFA, EEM, LQD et VNQ n'apparaiss
 | Canada, uniforme normalisé | 0,77 | 0,85 | 6,17 % | 4,78 % | 9,42 % | 12,94 % | 1,82 pt | 3,58 % | 0,00 % |
 
 Source : `montecarlo_summary_sample.csv` (50 000 portefeuilles par ligne, graine 123).
+Lecture : la colonne « Meilleur Sharpe simulé » se compare à « Sharpe de tangence », « Vol. min. simulée » à
+« Vol. du min. de variance », « Rend. max. simulé » à « Rend. max. de la frontière » ; les trois dernières
+colonnes mesurent la distance du nuage à la frontière. Trois constats. 1) Aucun des quatre tirages n'atteint la
+frontière : le meilleur des 50 000 portefeuilles reste sous la tangence (0,73 contre 0,80 aux É.-U., 0,82 contre
+0,85 au Canada) et aucune volatilité simulée ne descend au minimum de variance (6,06 % contre 5,41 % aux É.-U.).
+2) Le tirage uniforme normalisé fait pire que Dirichlet aux deux bouts de la frontière : Sharpe 0,68 contre 0,73
+et volatilité minimale 7,22 % contre 6,06 % aux É.-U., aucun portefeuille à moins de 1 point de la frontière ni
+avec un poids au-dessus de 50 % ; seul l'écart médian est comparable (4,00 contre 4,12 pt). 3) Le nuage
+canadien colle davantage à la frontière (écart médian 1,87 point contre 4,12 ; 7,89 % des tirages à moins de
+1 point contre 0,06 %) : l'équipondéré canadien, autour duquel les tirages se concentrent, part moins loin de sa
+tangence (Sharpe 0,61 contre 0,85, tableau 5.1) que l'américain (0,48 contre 0,80).
 
 Pourquoi le nuage ne touche pas la frontière. Les extrémités de la frontière sont des portefeuilles concentrés.
 Le rendement maximal est un seul FNB (SPY ou XSP.TO à 100 %) ; le minimum de variance met 73 % dans IEF ou 95 %
@@ -175,7 +201,11 @@ n'atteint 0,75 de Sharpe ni ne descend sous 6 % de volatilité ; le QP trouve 0,
 
 *Figure 3. FNB canadiens, tirage uniforme normalisé : le nuage est plus compact que sous Dirichlet (figure 1) et
 s'éloigne davantage de la frontière. XEM.TO, XRB.TO, XHY.TO et ZRE.TO ne reçoivent aucun poids sur la frontière ;
-XEG.TO (énergie, 29,2 % de volatilité) n'y entre qu'au minimum de variance (3.8 % au plus).*
+XEG.TO (énergie, 29,2 % de volatilité) n'y entre qu'au minimum de variance (3,8 % au plus).*
+
+Comment lire cette figure : mêmes conventions que la figure 1 ; seul le tirage change (vecteur uniforme normalisé
+par sa somme au lieu de Dirichlet), le nuage se resserre autour de l'équipondéré et le vide entre le nuage et la
+frontière s'élargit.
 
 ### 5.3 La frontière rééchantillonnée diversifie davantage et plafonne plus bas
 
@@ -198,6 +228,11 @@ maximal » est celui dont l'estimation est la moins sûre.
 
 *Figure 4. Gauche : frontière analytique (noir) et rééchantillonnée (orange), toutes deux évaluées sous les
 moments d'origine. Droite : poids moyens rééchantillonnés le long de la frontière, à comparer à la figure 2.*
+
+Comment lire cette figure : à gauche, les deux frontières sont notées sous les mêmes moments, donc comparables
+point à point ; la rééchantillonnée reste sous l'analytique et rebrousse chemin en haut. À droite, même
+construction que la figure 2, mais avec les poids moyens des 200 bootstraps : neuf FNB au lieu de trois portent
+la frontière.
 
 ### 5.4 Ledoit-Wolf déplace peu la frontière et n'aide pas hors échantillon
 
@@ -232,26 +267,54 @@ Fenêtre de 60 mois, rééquilibrage mensuel, 10 points de base par unité de ro
 
 Source : `results/tables/<univers>/oos_metrics.csv` ; rendements mensuels dans `oos_returns.csv`.
 Lecture : aux États-Unis, le portefeuille de Sharpe maximal bat 1/N de 0,26 de Sharpe net. Ses fenêtres
-glissantes ont surpondéré SPY, IEF puis GLD (figure 6), trois actifs qui ont continué à faire mieux que le reste
+glissantes ont surpondéré SPY, IEF puis GLD (figure 8), trois actifs qui ont continué à faire mieux que le reste
 de l'univers. Au Canada, il perd 0,11 de Sharpe contre 1/N et fait jeu égal avec l'inverse de la volatilité
 (0,62 contre 0,61). Sa rotation annuelle est de 3,2 contre 0,36 pour 1/N : le portefeuille est renouvelé plus
 de trois fois par an. Ce n'est donc pas une victoire générale de l'optimisation. DeMiguel, Garlappi et Uppal
 (2009) ont montré sur 14 règles et 7 jeux de données que 1/N n'est battu de façon fiable par aucune d'elles, et
 le résultat canadien va dans leur sens. La variance minimale, investie surtout en obligations (IEF aux
-États-Unis, figure 6), finit avec un TCAC inférieur à 3 % dans les deux univers.
+États-Unis, figure 8), finit avec un TCAC inférieur à 3 % dans les deux univers.
+
+![Sharpe hors échantillon net par règle, É.-U. et Canada](results/figures/oos_sharpe_bars.png)
+
+*Figure 5. Ratio de Sharpe hors échantillon net par règle, É.-U. (2013-01 à 2026-07) et Canada (2016-01 à
+2026-07), moments échantillon pour les règles optimisées. Chiffres copiés de `oos_metrics.csv` des deux univers
+par `scripts/plot_oos_sharpe.py`.*
+
+Comment lire cette figure : chaque groupe de barres est une règle, la barre bleue l'univers américain, l'orange
+le canadien ; plus la barre est haute, meilleur est le ratio de Sharpe net. Le classement s'inverse d'un univers
+à l'autre : le Sharpe maximal domine aux États-Unis (0,77 contre 0,51 pour 1/N) et l'équipondéré domine au
+Canada (0,73 contre 0,62).
 
 ![Croissance hors échantillon, FNB américains](results/figures/us/oos_growth.png)
 
-*Figure 5. Valeur de 1 dollar investi, net de coûts, FNB américains, 2013-01 à 2026-07 : couleur = règle,
+*Figure 6. Valeur de 1 dollar investi, net de coûts, FNB américains, 2013-01 à 2026-07 : couleur = règle,
 trait plein = moments échantillon, tirets = Ledoit-Wolf.*
+
+Comment lire cette figure : chaque courbe cumule les rendements mensuels nets d'une règle en partant de 1 ;
+l'étiquette au bord droit est la valeur finale, colonne `final_wealth` de `oos_metrics.csv`. Le Sharpe maximal
+(bleu, trait plein) finit premier à 2,86, sa variante Ledoit-Wolf (tirets) derrière à 2,66.
+
+![Croissance hors échantillon, FNB canadiens](results/figures/canada/oos_growth.png)
+
+*Figure 7. Valeur de 1 dollar investi, net de coûts, FNB canadiens, 2016-01 à 2026-07, mêmes conventions que la
+figure 6. L'équipondéré finit premier (2,38) devant le Sharpe maximal (2,32), avec une rotation annuelle près de
+neuf fois moindre (0,36 contre 3,20, `oos_metrics.csv`).*
+
+Comment lire cette figure : mêmes conventions que la figure 6 ; la courbe orange (1/N) reste au-dessus de la
+bleue (Sharpe maximal) pendant presque toute la période, l'inverse de la figure américaine.
 
 ![Poids glissants hors échantillon, FNB américains](results/figures/us/oos_weights_sample.png)
 
-*Figure 6. Poids cibles mensuels des quatre règles (moments échantillon, FNB américains). Le Sharpe maximal
-bascule entre trois ou quatre actifs, la variance minimale vit dans IEF et HYG, l'inverse de la volatilité et
-1/N bougent à peine.*
+*Figure 8. Poids cibles mensuels des quatre règles (moments échantillon, FNB américains, 2013-01 à 2026-07). Le
+Sharpe maximal bascule entre trois ou quatre actifs, la variance minimale vit dans IEF et HYG, l'inverse de la
+volatilité et 1/N bougent à peine.*
 
-Les mêmes figures pour le Canada et pour l'estimateur Ledoit-Wolf sont dans `results/figures/canada/` et sous le
+Comment lire cette figure : quatre sous-figures, une par règle ; dans chacune, les aires empilées sont les poids
+du portefeuille au début de chaque mois et somment à 100 %. Une règle stable dessine des bandes horizontales
+(1/N, en bas à droite) ; une règle instable dessine des à-coups verticaux (Sharpe maximal, en haut à gauche).
+
+Les autres figures canadiennes et les variantes Ledoit-Wolf sont dans `results/figures/canada/` et sous le
 suffixe `_ledoit_wolf`.
 
 ## 6. Limites et biais (statut)
@@ -274,6 +337,7 @@ suffixe `_ledoit_wolf`.
 uv sync --locked --all-extras            # Python 3.12, versions épinglées (uv.lock)
 uv run python scripts/fetch_data.py      # prix Yahoo + taux FRED et Banque du Canada -> data/raw/ (avec manifeste)
 make run                                 # 2 univers x 2 estimateurs -> results/tables/, results/figures/
+uv run python scripts/plot_oos_sharpe.py # figure 5 : barres du Sharpe hors échantillon, depuis oos_metrics.csv
 ```
 
 Équivalents : `make setup`, `make data`, `make run`. Durées mesurées (MacBook M2) : `make run` entre 24 et 30
@@ -296,13 +360,15 @@ uv run efficient-frontier demo --n-sim 5000 --n-boot 20      # sorties dans resu
 efficient-frontier-mpt/
 ├── src/efficient_frontier/   config.py (univers, chemins), data.py (parquet -> rendements, taux), estimation.py,
 │                             frontier.py, montecarlo.py, backtest.py, plots.py, pipeline.py, cli.py
-├── scripts/fetch_data.py     téléchargement idempotent avec manifeste sha256
+├── scripts/                  fetch_data.py (téléchargement idempotent, manifeste sha256),
+│                             plot_oos_sharpe.py (figure 5 : barres du Sharpe hors échantillon)
 ├── tests/                    25 tests pytest, données synthétiques, sans réseau
 ├── assets/style.mplstyle     palette Okabe-Ito, polices DejaVu/STIX, PDF avec polices de type 42
 ├── results/tables/<univers>/ frontier, special_portfolios, montecarlo_summary, resampled_frontier, moments,
 │                             correlation, oos_metrics, oos_returns, summary (JSON), par estimateur
 ├── results/figures/<univers>/ cloud_{dirichlet,uniform}_<est>, transition_map, corr_heatmap,
 │                             resampled_vs_analytical, oos_growth, oos_weights (PNG + PDF), cloud_interactive (HTML)
+├── results/figures/          oos_sharpe_bars (PNG + PDF), les deux univers côte à côte
 ├── data/raw/                 non versionné : prix parquet, CSV des taux, manifest.json
 ├── .github/workflows/ci.yml  uv sync --locked, ruff, pytest, démo synthétique
 └── Makefile, pyproject.toml, uv.lock, LICENSE, CITATION.cff

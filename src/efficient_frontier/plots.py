@@ -17,6 +17,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import seaborn as sns  # noqa: E402
 from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
+from matplotlib.ticker import FuncFormatter  # noqa: E402
 
 from .backtest import STRATEGY_LABELS  # noqa: E402
 from .config import STYLE_FILE  # noqa: E402
@@ -26,6 +27,23 @@ from .montecarlo import MonteCarloResult  # noqa: E402
 STRATEGY_COLORS = {"max_sharpe": "#0072B2", "min_variance": "#E69F00", "inverse_vol": "#009E73", "equal_weight": "#D55E00"}
 ESTIMATOR_STYLES = {"sample": "-", "ledoit_wolf": "--"}
 ESTIMATOR_LABELS = {"sample": "échantillon", "ledoit_wolf": "Ledoit-Wolf"}
+SAMPLING_LABELS = {"dirichlet": "tirage de Dirichlet", "uniform": "tirage uniforme normalisé"}
+
+
+def fr_num(x: float, dec: int = 2) -> str:
+    """Nombre au format français : virgule décimale."""
+    return f"{x:.{dec}f}".replace(".", ",")
+
+
+#: formateur d'axe : virgule décimale sur les graduations numériques
+FR_AXIS = FuncFormatter(lambda x, _: f"{x:g}".replace(".", ","))
+
+
+def fr_axes(*axes) -> None:
+    """Applique la virgule décimale aux graduations des axes numériques donnés."""
+    for ax in axes:
+        ax.xaxis.set_major_formatter(FR_AXIS)
+        ax.yaxis.set_major_formatter(FR_AXIS)
 
 
 def use_style() -> None:
@@ -77,9 +95,9 @@ def plot_cloud(
     ax.plot(vols * 100, (rf + (tan["ret"] - rf) / tan["vol"] * vols) * 100, color="#D55E00", ls="--", lw=1.2,
             label="droite de marché des capitaux")
     ax.scatter([mv["vol"] * 100], [mv["ret"] * 100], marker="s", s=55, color="#E69F00", edgecolor="black", zorder=6,
-               label=f"variance minimale (vol. {mv['vol'] * 100:.1f} %)")
+               label=f"variance minimale (vol. {fr_num(mv['vol'] * 100, 1)} %)")
     ax.scatter([tan["vol"] * 100], [tan["ret"] * 100], marker="*", s=170, color="#D55E00", edgecolor="black", zorder=7,
-               label=f"tangence (Sharpe {tan['sharpe']:.2f})")
+               label=f"tangence (Sharpe {fr_num(tan['sharpe'])})")
     ax.scatter([0], [rf * 100], marker="o", s=18, color="black", zorder=6)
     ax.annotate("taux sans risque", (0, rf * 100), xytext=(4, -9), textcoords="offset points", fontsize=7)
     ax.scatter(asset_stats["vol"] * 100, asset_stats["ret"] * 100, marker="D", s=20, color="black", zorder=6, label="actifs individuels")
@@ -91,15 +109,25 @@ def plot_cloud(
     ax.set_ylabel("rendement espéré annualisé (%)")
     ax.set_title(title)
     ax.legend(loc="upper left", fontsize=7)
+    fr_axes(ax)
+    cbar.ax.yaxis.set_major_formatter(FR_AXIS)
     return save(fig, stem)
 
 
+LEGEND_MIN_WEIGHT = 0.5  # % : seuil sous lequel un actif jamais retenu sort de la légende
+
+
 def plot_transition_map(frontier: Frontier, stem: Path, title: str, markers: dict[str, float] | None = None) -> list[Path]:
-    """Carte de transition : poids empilés le long de la frontière, en fonction de la volatilité cible."""
+    """Carte de transition : poids empilés le long de la frontière, en fonction de la volatilité cible.
+
+    La légende ne liste que les actifs dont le poids maximal sur la frontière dépasse
+    ``LEGEND_MIN_WEIGHT`` (en %) ; les aires des autres sont tracées mais invisibles (poids nuls).
+    """
     fig, ax = plt.subplots(figsize=(7.0, 4.0))
     x = frontier.table["vol"].to_numpy() * 100
     w = frontier.weights.T * 100
-    ax.stackplot(x, w, labels=frontier.assets, colors=asset_colors(len(frontier.assets)), alpha=0.9, linewidth=0.3, edgecolor="white")
+    labels = [a if w[i].max() >= LEGEND_MIN_WEIGHT else "_nolegend_" for i, a in enumerate(frontier.assets)]
+    ax.stackplot(x, w, labels=labels, colors=asset_colors(len(frontier.assets)), alpha=0.9, linewidth=0.3, edgecolor="white")
     for name, v in (markers or {}).items():
         ax.axvline(v * 100, color="black", ls=":", lw=1)
         ax.text(v * 100, 97, name, ha="center", va="top", fontsize=7, bbox={"facecolor": "white", "edgecolor": "none", "pad": 1.5})
@@ -108,16 +136,20 @@ def plot_transition_map(frontier: Frontier, stem: Path, title: str, markers: dic
     ax.set_xlabel("volatilité annualisée du portefeuille de la frontière (%)")
     ax.set_ylabel("poids (%)")
     ax.set_title(title)
-    ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=7, ncol=1)
+    ax.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=7, ncol=1,
+              title=f"poids max. ≥ {fr_num(LEGEND_MIN_WEIGHT, 1)} %", title_fontsize=7)
+    fr_axes(ax)
     return save(fig, stem)
 
 
 def plot_corr_heatmap(corr: pd.DataFrame, stem: Path, title: str) -> list[Path]:
     fig, ax = plt.subplots(figsize=(6.4, 5.4))
-    sns.heatmap(corr, ax=ax, cmap="RdBu_r", vmin=-1, vmax=1, center=0, annot=True, fmt=".2f", annot_kws={"size": 6},
+    annot = corr.map(lambda v: fr_num(v))
+    sns.heatmap(corr, ax=ax, cmap="RdBu_r", vmin=-1, vmax=1, center=0, annot=annot, fmt="", annot_kws={"size": 6},
                 square=True, linewidths=0.5, cbar_kws={"shrink": 0.75, "label": "corrélation des rendements mensuels"})
     ax.set_title(title)
     ax.grid(False)
+    ax.collections[0].colorbar.ax.yaxis.set_major_formatter(FR_AXIS)
     return save(fig, stem)
 
 
@@ -142,6 +174,7 @@ def plot_resampled_vs_analytical(frontier: Frontier, resampled: pd.DataFrame, st
     ax2.set_title("carte de transition rééchantillonnée")
     ax2.legend(loc="center left", bbox_to_anchor=(1.01, 0.5), fontsize=7)
     fig.suptitle(title, fontsize=10)
+    fr_axes(ax1, ax2)
     return save(fig, stem)
 
 
@@ -149,6 +182,7 @@ def plot_oos_growth(returns_by_estimator: dict[str, pd.DataFrame], stem: Path, t
     """Croissance cumulée hors échantillon (net de coûts) : couleur = stratégie, trait = estimateur."""
     fig, ax = plt.subplots(figsize=(7.4, 4.4))
     drawn_free = set()
+    ends: list[tuple[object, float, str]] = []
     for est, rets in returns_by_estimator.items():
         for s in rets.columns:
             if s in ("inverse_vol", "equal_weight"):
@@ -162,11 +196,20 @@ def plot_oos_growth(returns_by_estimator: dict[str, pd.DataFrame], stem: Path, t
                 ls = ESTIMATOR_STYLES[est]
             wealth = (1.0 + rets[s]).cumprod()
             ax.plot(wealth.index, wealth, color=STRATEGY_COLORS[s], ls=ls, lw=1.5, label=label)
-            ax.annotate(f"{wealth.iloc[-1]:.2f}", (wealth.index[-1], wealth.iloc[-1]), xytext=(3, 0), textcoords="offset points",
-                        fontsize=7, va="center", color=STRATEGY_COLORS[s])
+            ends.append((wealth.index[-1], float(wealth.iloc[-1]), STRATEGY_COLORS[s]))
+    # étiquettes finales décalées verticalement pour rester lisibles quand deux valeurs sont proches
+    lo, hi = ax.get_ylim()
+    gap = 0.035 * (hi - lo)
+    y_prev = None
+    for x_last, y, color in sorted(ends, key=lambda e: e[1]):
+        y_lab = y if y_prev is None else max(y, y_prev + gap)
+        y_prev = y_lab
+        ax.annotate(fr_num(y), (x_last, y_lab), xytext=(3, 0), textcoords="offset points",
+                    fontsize=7, va="center", color=color)
     ax.set_ylabel(f"valeur de 1 unité investie (net de {cost_bps:g} pb par rotation)")
     ax.set_title(title)
     ax.legend(loc="upper left", fontsize=7)
+    ax.yaxis.set_major_formatter(FR_AXIS)
     return save(fig, stem)
 
 
@@ -182,6 +225,7 @@ def plot_rolling_weights(weights: dict[str, pd.DataFrame], stem: Path, title: st
         ax.set_title(STRATEGY_LABELS[s], fontsize=9)
         ax.set_ylim(0, 100)
         ax.set_xlim(w.index[0], w.index[-1])
+        ax.yaxis.set_major_formatter(FR_AXIS)
     for ax in axes[:, 0]:
         ax.set_ylabel("poids (%)")
     handles, labels = axes[0, 0].get_legend_handles_labels()
@@ -210,7 +254,8 @@ def plotly_cloud(
     texts = ["<br>".join(f"{a} : {w:.1%}" for a, w in zip(mc.assets, mc.weights[i], strict=True) if w >= 0.005) for i in idx]
     fig = go.Figure()
     fig.add_trace(go.Scattergl(
-        x=mc.vol[idx] * 100, y=mc.ret[idx] * 100, mode="markers", name=f"portefeuilles simulés ({mc.sampling})",
+        x=mc.vol[idx] * 100, y=mc.ret[idx] * 100, mode="markers",
+        name=f"portefeuilles simulés ({SAMPLING_LABELS.get(mc.sampling, mc.sampling)})",
         marker=dict(size=4, color=mc.sharpe[idx], colorscale="Blues", cmin=float(np.nanmin(mc.sharpe)), cmax=float(np.nanmax(mc.sharpe)),
                     colorbar=dict(title="Sharpe"), opacity=0.7),
         text=texts,

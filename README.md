@@ -10,6 +10,8 @@ Garlappi et Uppal (2009).
 ![licence](https://img.shields.io/badge/code-MIT-green)
 ![figures](https://img.shields.io/badge/figures%20et%20texte-CC%20BY%204.0-lightgrey)
 
+Le même contenu en PDF : [rapport/rapport.pdf](rapport/rapport.pdf).
+
 **Résultat en une phrase.** Sur 50 000 portefeuilles aléatoires, le meilleur ratio de Sharpe, le rendement
 excédant le taux sans risque par unité de volatilité, plafonne à 0,73 contre 0,80 pour le portefeuille de
 tangence, le portefeuille de la frontière où ce ratio est maximal, calculé par programme quadratique

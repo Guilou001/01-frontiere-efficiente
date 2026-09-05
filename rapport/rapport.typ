@@ -1,4 +1,4 @@
-#set document(title: "La frontière efficiente de Markowitz, mesurée : Monte Carlo contre programme quadratique, frontière rééchantillonnée et test hors échantillon contre 1/N", author: "Guillaume Vaudescal")
+#set document(title: "Construire une frontière efficiente, puis vérifier si elle résiste aux données nouvelles", author: "Guillaume Vaudescal")
 #set page(
   paper: "a4",
   margin: (x: 2.2cm, y: 2.4cm),
@@ -30,20 +30,26 @@
 
 #align(center)[
   #block(width: 100%)[
-    #text(size: 18pt, weight: "bold")[La frontière efficiente de Markowitz, mesurée : Monte Carlo contre programme quadratique, frontière rééchantillonnée et test hors échantillon contre 1/N]
+    #text(size: 18pt, weight: "bold")[Construire une frontière efficiente, puis vérifier si elle résiste aux données nouvelles]
     #v(0.6em)
-    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-08-30 · #link("https://github.com/Guilou001/01-frontiere-efficiente")[Guilou001/01-frontiere-efficiente]]
+    #text(size: 10pt, fill: luma(70))[Guillaume Vaudescal · 2026-09-04 · #link("https://github.com/Guilou001/01-frontiere-efficiente")[Guilou001/01-frontiere-efficiente]]
   ]
 ]
 #v(1.2em)
 #line(length: 100%, stroke: 0.6pt + luma(190))
 #v(0.8em)
 
-Markowitz (1952) et Sharpe (1964, 1966) appliqués à 11 FNB américains multi-actifs (2008-01 à 2026-07) et à 11 FNB canadiens (2011-01 à 2026-07). S'y ajoutent le rétrécissement de la covariance de Ledoit et Wolf (2004), la frontière rééchantillonnée de Michaud (1998) et la comparaison hors échantillon à l'équipondéré de DeMiguel, Garlappi et Uppal (2009).
+Un investisseur peut choisir un portefeuille en recherchant le meilleur compromis entre le rendement attendu et le risque. Toutefois, ce choix dépend de moyennes et de corrélations estimées sur le passé, donc de nombres qui changent lorsque l'échantillon change. Le présent projet mesure cette fragilité sur onze fonds négociés en bourse américains et onze fonds canadiens.
+
+La question est la suivante : une allocation optimisée conserve-t-elle son avantage lorsqu'on la teste sur des mois qu'elle n'a pas utilisés pour se construire ? Le dépôt compare les portefeuilles simulés à la solution exacte, puis oppose plusieurs règles d'allocation à une répartition égale entre tous les fonds.
+
+*Résultat principal.* Aux États-Unis, le portefeuille qui maximise le ratio de Sharpe obtient 0,77 hors échantillon, contre 0,51 pour la répartition égale. Au Canada, le classement s'inverse : le même portefeuille optimisé obtient 0,62, contre 0,73 pour la répartition égale. En effet, le programme d'optimisation trouve correctement la meilleure solution pour les données qu'on lui donne, mais il ne peut pas corriger l'incertitude présente dans ces données.
+
+Afin d'expliquer ce résultat, nous procéderons en quatre étapes. Dans un premier temps, nous présenterons les deux univers de fonds et les périodes étudiées. Dans un deuxième temps, nous expliquerons comment la frontière est calculée et pourquoi les portefeuilles tirés au hasard ne l'atteignent pas toujours. Ensuite, nous comparerons les règles d'allocation sur les données nouvelles. Enfin, nous présenterons les coûts, les limites et les commandes qui permettent de reproduire l'étude.
 
 Le même contenu en PDF : #link("rapport/rapport.pdf")[rapport/rapport.pdf].
 
-*Résultat en une phrase.* Sur 50 000 portefeuilles aléatoires, le meilleur ratio de Sharpe, le rendement excédant le taux sans risque par unité de volatilité, plafonne à 0,73 contre 0,80 pour le portefeuille de tangence, le portefeuille de la frontière où ce ratio est maximal, calculé par programme quadratique (FNB américains, 2008-2026) ; hors échantillon, net de 10 points de base par rotation, le portefeuille de Sharpe maximal bat l'équipondéré aux États-Unis (Sharpe 0,77 contre 0,51, 2013-2026) et perd au Canada (0,62 contre 0,73, 2016-2026).
+== Résumé en anglais
 
 _English summary._ Modern Portfolio Theory on two ETF universes: 11 US multi-asset ETFs (2008-01 to 2026-07, 223 months) and 11 Canadian ETFs in CAD (2011-01 to 2026-07, 187 months). Long-only efficient frontier by quadratic programming (cvxpy, Clarabel), closed-form unconstrained frontier (two-fund theorem), minimum-variance, tangency and capital market line; 50,000 random portfolios per draw (Dirichlet(1) versus uniform-normalised weights) and why the cloud never reaches the frontier's ends; Ledoit-Wolf constant-correlation shrinkage (intensity 0.085 US, 0.203 Canada); Michaud's resampled frontier (200 bootstraps); walk-forward backtest (60-month window, monthly rebalancing, 10 bp one-way costs) of max-Sharpe, min-variance, inverse-vol and 1/N. Measured: the best simulated Sharpe is 0.73 (US) and 0.82 (Canada) against 0.80 and 0.85 for the tangency portfolio; out of sample, max-Sharpe beats 1/N in the US (0.77 vs 0.51) and loses in Canada (0.62 vs 0.73); Ledoit-Wolf inputs do not rescue max-Sharpe (0.69 US, 0.57 Canada). All numbers come from #raw("results/tables/").
 
@@ -53,7 +59,7 @@ _Figure 1. FNB américains, 2008-01 à 2026-07, moments échantillon. 50 000 por
 
 Comment lire cette figure : chaque point est un portefeuille simulé, placé par sa volatilité (axe horizontal) et son rendement espéré (axe vertical), puis coloré par son ratio de Sharpe ; à volatilité égale, plus haut est mieux. Le trait noir est la limite atteignable sans vente à découvert : aucun point ne la franchit, et l'écart entre le nuage et ses deux extrémités est mesuré en section 5.2.
 
-== 1. Ce que c'est, ce que ce n'est pas
+== 1. La question et le périmètre
 
 C'est une mise en œuvre complète et testée de la théorie moderne du portefeuille sur des données publiques, avec des paquets Python courants (numpy, pandas, scipy, cvxpy, matplotlib, seaborn, plotly, yfinance) et des résultats mesurés plutôt que racontés. Les paramètres sont fixés avant l'exécution et ne sont pas ajustés après coup : fenêtre de 60 mois, 10 points de base, graine 123, 50 000 tirages, 200 bootstraps, le bootstrap étant un rééchantillonnage avec remise des mois observés. La partie dans l'échantillon (sections 5.1 à 5.4) et la partie hors échantillon (section 5.5) sont séparées une fois pour toutes.
 
@@ -138,7 +144,7 @@ Les prix ne sont pas versionnés (conditions d'utilisation de Yahoo Finance) : #
 
 == 4. Méthode
 
-#raw("flowchart LR\n  A[prix ajustés quotidiens<br>yfinance] --> B[rendements mensuels simples]\n  R[taux sans risque<br>FRED / BdC] --> B\n  B --> C{estimateur}\n  C -->|sample| D[moyenne, covariance ddof 1, x12]\n  C -->|ledoit_wolf| E[covariance rétrécie<br>vers la corrélation constante]\n  D --> F[frontière long-only QP<br>variance min, tangence, CML]\n  E --> F\n  D --> G[50 000 portefeuilles<br>Dirichlet et uniforme]\n  B --> H[200 bootstraps<br>frontière rééchantillonnée]\n  B --> I[backtest glissant 60 mois<br>4 règles, 10 pb, 2 estimateurs]\n  F --> J[tables CSV, figures PNG/PDF, HTML]\n  G --> J\n  H --> J\n  I --> J", block: true, lang: "mermaid")
+#raw("flowchart LR\n  A[prix ajustés quotidiens<br>yfinance] --> B[rendements mensuels simples]\n  R[taux sans risque<br>FRED / BdC] --> B\n  B --> C{estimateur}\n  C -->|sample| D[moyenne, covariance ddof 1, x12]\n  C -->|ledoit_wolf| E[covariance rétrécie<br>vers la corrélation constante]\n  D --> F[frontière long-only QP<br>variance min, tangence, CML]\n  E --> F\n  D --> G[50 000 portefeuilles<br>Dirichlet et uniforme]\n  B --> H[200 bootstraps<br>frontière rééchantillonnée]\n  B --> I[test glissant sur 60 mois<br>4 règles, 10 pb, 2 estimateurs]\n  F --> J[tables CSV, figures PNG/PDF, HTML]\n  G --> J\n  H --> J\n  I --> J", block: true, lang: "mermaid")
 
 Choix qui comptent :
 
@@ -146,7 +152,7 @@ Choix qui comptent :
 + Frontière long-only par programme quadratique (cvxpy, solveur Clarabel), compilé une fois avec des paramètres et résolu pour 60 cibles de rendement entre le minimum de variance et l'actif le plus rentable. La tangence long-only passe par la transformation de Charnes-Cooper (minimiser y'Σy sous (μ - r)'y = 1, y ≥ 0, puis normaliser), qui en fait un QP exact plutôt qu'une recherche non convexe.
 + Deux tirages de poids pour le Monte Carlo : Dirichlet(1, …, 1), définie sous la figure 1, et vecteur uniforme normalisé par sa somme, qui se concentre autour de 1/N. Les deux sont vectorisés (un produit matriciel et un #raw("einsum"), aucune boucle sur les portefeuilles).
 + Frontière rééchantillonnée : 200 bootstraps i.i.d. des mois, les tirages étant indépendants et identiquement distribués, ré-estimation, frontière à 30 rangs, moyenne des poids par rang, statistiques évaluées sous les moments d'origine.
-+ Backtest glissant : à chaque fin de mois, moments estimés sur les 60 mois précédents, poids cibles tenus le mois suivant, dérive des poids entre deux rééquilibrages, coût de 10 points de base par unité de rotation aller simple. Quatre règles : Sharpe maximal, variance minimale, inverse de la volatilité, 1/N ; les deux premières sous moments échantillon et sous Ledoit-Wolf. TCAC, le taux de croissance annuel composé, en années civiles (jours / 365,25) ; Sharpe sur rendements excédentaires mensuels × √12 ; perte maximale sur la richesse cumulée ; rotation annuelle moyenne.
++ Test glissant : à chaque fin de mois, moments estimés sur les 60 mois précédents, poids cibles tenus le mois suivant, dérive des poids entre deux rééquilibrages, coût de 10 points de base par unité de rotation aller simple. Quatre règles : Sharpe maximal, variance minimale, inverse de la volatilité, 1/N ; les deux premières sous moments échantillon et sous Ledoit-Wolf. TCAC, le taux de croissance annuel composé, en années civiles (jours / 365,25) ; Sharpe sur rendements excédentaires mensuels × √12 ; perte maximale sur la richesse cumulée ; rotation annuelle moyenne.
 
 == 5. Résultats (mesurés, copiés de #raw("results/tables/"))
 
@@ -503,23 +509,23 @@ Les autres figures canadiennes et les variantes Ledoit-Wolf sont dans #raw("resu
     [reconnu ; la rotation annuelle est publiée pour que le lecteur applique son propre coût],
     [Taxes, distributions, frais de gestion : les clôtures ajustées de Yahoo réinvestissent les distributions brutes et ignorent la fiscalité],
     [reconnu],
-    [Long-only seulement : la frontière sans contrainte de signe est calculée (forme fermée) mais ni simulée ni testée hors échantillon],
+    [Long-only seulement : la frontière sans contrainte de signe est calculée par une formule exacte mais ni simulée ni testée hors échantillon],
     [reconnu, par choix (investisseur en FNB)],
     [Rendements mensuels supposés i.i.d. pour l'annualisation et le bootstrap ; pas de bloc-bootstrap],
     [reconnu],
     [Taux sans risque moyen sur la période pour la tangence dans l'échantillon],
-    [reconnu ; le backtest utilise la moyenne de chaque fenêtre],
+    [reconnu ; le test utilise la moyenne de chaque fenêtre],
     [Prix ajustés Yahoo révisés dans le temps (dividendes, corrections) : une réexécution ultérieure peut différer à la marge],
     [reconnu ; manifeste avec sha256 et date],
     [Tangence long-only indéfinie si aucun actif ne bat le taux sans risque : le code renvoie la variance minimale],
-    [vérifié : 0 déclenchement sur les 326 fenêtres américaines et les 254 fenêtres canadiennes du backtest (2 estimateurs)],
+    [vérifié : 0 déclenchement sur les 326 fenêtres américaines et les 254 fenêtres canadiennes du test (2 estimateurs)],
 )
 
 == 7. Reproduire
 
 #raw("uv sync --locked --all-extras            # Python 3.12, versions épinglées (uv.lock)\nuv run python scripts/fetch_data.py      # prix Yahoo + taux FRED et Banque du Canada -> data/raw/ (avec manifeste)\nmake run                                 # 2 univers x 2 estimateurs -> results/tables/, results/figures/\nuv run python scripts/plot_oos_sharpe.py # figure 5 : barres du Sharpe hors échantillon, depuis oos_metrics.csv", block: true, lang: "bash")
 
-Équivalents : #raw("make setup"), #raw("make data"), #raw("make run"). Durées mesurées (MacBook M2) : #raw("make run") entre 24 et 30 secondes pour les quatre exécutions, dont 200 bootstraps × 30 QP et (163 + 127) mois de backtest × 2 estimateurs. #raw("uv run pytest") passe 25 tests en moins de 10 secondes. #raw("uv run efficient-frontier demo") tourne en 3 secondes sur un univers synthétique sans réseau ; c'est ce que la CI exécute. Graines : 123 pour le Monte Carlo et le bootstrap ; les QP sont déterministes.
+Équivalents : #raw("make setup"), #raw("make data"), #raw("make run"). Durées mesurées (MacBook M2) : #raw("make run") entre 24 et 30 secondes pour les quatre exécutions, dont 200 bootstraps × 30 QP et (163 + 127) mois de test × 2 estimateurs. #raw("uv run pytest") passe 25 tests en moins de 10 secondes. #raw("uv run efficient-frontier demo") tourne en 3 secondes sur un univers synthétique sans réseau ; c'est ce que la CI exécute. Graines : 123 pour le Monte Carlo et le bootstrap ; les QP sont déterministes.
 
 Ligne de commande :
 

@@ -1,9 +1,12 @@
-# La frontière efficiente de Markowitz, mesurée : Monte Carlo contre programme quadratique, frontière rééchantillonnée et test hors échantillon contre 1/N
+# Construire une frontière efficiente, puis vérifier si elle résiste aux données nouvelles
 
-Markowitz (1952) et Sharpe (1964, 1966) appliqués à 11 FNB américains multi-actifs (2008-01 à 2026-07) et à
-11 FNB canadiens (2011-01 à 2026-07). S'y ajoutent le rétrécissement de la covariance de Ledoit et Wolf (2004),
-la frontière rééchantillonnée de Michaud (1998) et la comparaison hors échantillon à l'équipondéré de DeMiguel,
-Garlappi et Uppal (2009).
+Un investisseur peut choisir un portefeuille en recherchant le meilleur compromis entre le rendement attendu et le risque. Toutefois, ce choix dépend de moyennes et de corrélations estimées sur le passé, donc de nombres qui changent lorsque l'échantillon change. Le présent projet mesure cette fragilité sur onze fonds négociés en bourse américains et onze fonds canadiens.
+
+La question est la suivante : une allocation optimisée conserve-t-elle son avantage lorsqu'on la teste sur des mois qu'elle n'a pas utilisés pour se construire ? Le dépôt compare les portefeuilles simulés à la solution exacte, puis oppose plusieurs règles d'allocation à une répartition égale entre tous les fonds.
+
+**Résultat principal.** Aux États-Unis, le portefeuille qui maximise le ratio de Sharpe obtient 0,77 hors échantillon, contre 0,51 pour la répartition égale. Au Canada, le classement s'inverse : le même portefeuille optimisé obtient 0,62, contre 0,73 pour la répartition égale. En effet, le programme d'optimisation trouve correctement la meilleure solution pour les données qu'on lui donne, mais il ne peut pas corriger l'incertitude présente dans ces données.
+
+Afin d'expliquer ce résultat, nous procéderons en quatre étapes. Dans un premier temps, nous présenterons les deux univers de fonds et les périodes étudiées. Dans un deuxième temps, nous expliquerons comment la frontière est calculée et pourquoi les portefeuilles tirés au hasard ne l'atteignent pas toujours. Ensuite, nous comparerons les règles d'allocation sur les données nouvelles. Enfin, nous présenterons les coûts, les limites et les commandes qui permettent de reproduire l'étude.
 
 [![ci](https://github.com/Guilou001/01-frontiere-efficiente/actions/workflows/ci.yml/badge.svg)](https://github.com/Guilou001/01-frontiere-efficiente/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.12-blue)
@@ -12,12 +15,8 @@ Garlappi et Uppal (2009).
 
 Le même contenu en PDF : [rapport/rapport.pdf](rapport/rapport.pdf).
 
-**Résultat en une phrase.** Sur 50 000 portefeuilles aléatoires, le meilleur ratio de Sharpe, le rendement
-excédant le taux sans risque par unité de volatilité, plafonne à 0,73 contre 0,80 pour le portefeuille de
-tangence, le portefeuille de la frontière où ce ratio est maximal, calculé par programme quadratique
-(FNB américains, 2008-2026) ; hors échantillon, net de 10 points de base par rotation, le portefeuille de Sharpe
-maximal bat l'équipondéré aux États-Unis (Sharpe 0,77 contre 0,51, 2013-2026) et perd au Canada (0,62 contre
-0,73, 2016-2026).
+<details>
+<summary>Résumé en anglais</summary>
 
 *English summary.* Modern Portfolio Theory on two ETF universes: 11 US multi-asset ETFs (2008-01 to 2026-07,
 223 months) and 11 Canadian ETFs in CAD (2011-01 to 2026-07, 187 months). Long-only efficient frontier by
@@ -29,6 +28,8 @@ weights) and why the cloud never reaches the frontier's ends; Ledoit-Wolf consta
 Measured: the best simulated Sharpe is 0.73 (US) and 0.82 (Canada) against 0.80 and 0.85 for the tangency
 portfolio; out of sample, max-Sharpe beats 1/N in the US (0.77 vs 0.51) and loses in Canada (0.62 vs 0.73);
 Ledoit-Wolf inputs do not rescue max-Sharpe (0.69 US, 0.57 Canada). All numbers come from `results/tables/`.
+
+</details>
 
 ![Nuage Monte Carlo et frontière efficiente, FNB américains](results/figures/us/cloud_dirichlet_sample.png)
 
@@ -43,8 +44,7 @@ Comment lire cette figure : chaque point est un portefeuille simulé, placé par
 son rendement espéré (axe vertical), puis coloré par son ratio de Sharpe ; à volatilité égale, plus haut est
 mieux. Le trait noir est la limite atteignable sans vente à découvert : aucun point ne la franchit, et l'écart
 entre le nuage et ses deux extrémités est mesuré en section 5.2.
-
-## 1. Ce que c'est, ce que ce n'est pas
+## 1. La question et le périmètre
 
 C'est une mise en œuvre complète et testée de la théorie moderne du portefeuille sur des données publiques,
 avec des paquets Python courants (numpy, pandas, scipy, cvxpy, matplotlib, seaborn, plotly, yfinance) et des
@@ -104,7 +104,7 @@ flowchart LR
   E --> F
   D --> G[50 000 portefeuilles<br>Dirichlet et uniforme]
   B --> H[200 bootstraps<br>frontière rééchantillonnée]
-  B --> I[backtest glissant 60 mois<br>4 règles, 10 pb, 2 estimateurs]
+  B --> I[test glissant sur 60 mois<br>4 règles, 10 pb, 2 estimateurs]
   F --> J[tables CSV, figures PNG/PDF, HTML]
   G --> J
   H --> J
@@ -126,7 +126,7 @@ Choix qui comptent :
 4. Frontière rééchantillonnée : 200 bootstraps i.i.d. des mois, les tirages étant indépendants et identiquement
    distribués, ré-estimation, frontière à 30 rangs, moyenne des poids par rang, statistiques évaluées sous les
    moments d'origine.
-5. Backtest glissant : à chaque fin de mois, moments estimés sur les 60 mois précédents, poids cibles tenus le
+5. Test glissant : à chaque fin de mois, moments estimés sur les 60 mois précédents, poids cibles tenus le
    mois suivant, dérive des poids entre deux rééquilibrages, coût de 10 points de base par unité de rotation
    aller simple. Quatre règles : Sharpe maximal, variance minimale, inverse de la volatilité, 1/N ; les deux
    premières sous moments échantillon et sous Ledoit-Wolf. TCAC, le taux de croissance annuel composé, en années
@@ -327,11 +327,11 @@ suffixe `_ledoit_wolf`.
 | Biais de sélection de l'univers : FNB choisis en 2026 parmi ceux qui ont survécu et qui ont un historique complet | reconnu ; deux abandons documentés (section 3) ; aucun FNB fermé n'est inclus |
 | Rééquilibrage mensuel et coût fixe de 10 points de base, sans écart acheteur-vendeur variable ni impact de marché | reconnu ; la rotation annuelle est publiée pour que le lecteur applique son propre coût |
 | Taxes, distributions, frais de gestion : les clôtures ajustées de Yahoo réinvestissent les distributions brutes et ignorent la fiscalité | reconnu |
-| Long-only seulement : la frontière sans contrainte de signe est calculée (forme fermée) mais ni simulée ni testée hors échantillon | reconnu, par choix (investisseur en FNB) |
+| Long-only seulement : la frontière sans contrainte de signe est calculée par une formule exacte mais ni simulée ni testée hors échantillon | reconnu, par choix (investisseur en FNB) |
 | Rendements mensuels supposés i.i.d. pour l'annualisation et le bootstrap ; pas de bloc-bootstrap | reconnu |
-| Taux sans risque moyen sur la période pour la tangence dans l'échantillon | reconnu ; le backtest utilise la moyenne de chaque fenêtre |
+| Taux sans risque moyen sur la période pour la tangence dans l'échantillon | reconnu ; le test utilise la moyenne de chaque fenêtre |
 | Prix ajustés Yahoo révisés dans le temps (dividendes, corrections) : une réexécution ultérieure peut différer à la marge | reconnu ; manifeste avec sha256 et date |
-| Tangence long-only indéfinie si aucun actif ne bat le taux sans risque : le code renvoie la variance minimale | vérifié : 0 déclenchement sur les 326 fenêtres américaines et les 254 fenêtres canadiennes du backtest (2 estimateurs) |
+| Tangence long-only indéfinie si aucun actif ne bat le taux sans risque : le code renvoie la variance minimale | vérifié : 0 déclenchement sur les 326 fenêtres américaines et les 254 fenêtres canadiennes du test (2 estimateurs) |
 
 ## 7. Reproduire
 
@@ -343,7 +343,7 @@ uv run python scripts/plot_oos_sharpe.py # figure 5 : barres du Sharpe hors éch
 ```
 
 Équivalents : `make setup`, `make data`, `make run`. Durées mesurées (MacBook M2) : `make run` entre 24 et 30
-secondes pour les quatre exécutions, dont 200 bootstraps × 30 QP et (163 + 127) mois de backtest × 2 estimateurs.
+secondes pour les quatre exécutions, dont 200 bootstraps × 30 QP et (163 + 127) mois de test × 2 estimateurs.
 `uv run pytest` passe 25 tests en moins de 10 secondes. `uv run efficient-frontier demo` tourne en 3 secondes sur
 un univers synthétique sans réseau ; c'est ce que la CI exécute. Graines : 123 pour le Monte Carlo et le
 bootstrap ; les QP sont déterministes.

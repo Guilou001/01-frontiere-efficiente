@@ -20,6 +20,11 @@ lines.markersize : 5
 legend.frameon : False
 figure.figsize : 6.4, 4.2
 figure.dpi : 110
+figure.facecolor : white
+axes.facecolor : white
+savefig.facecolor : white
+savefig.edgecolor : white
+savefig.transparent : False
 savefig.dpi : 200
 savefig.bbox : tight
 savefig.pad_inches : 0.03

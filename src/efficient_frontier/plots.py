@@ -1,7 +1,7 @@
 """Figures matplotlib (PNG + PDF vectoriel) avec le style ``assets/style.mplstyle``, heatmap seaborn, nuage Plotly.
 
 Choix de couleurs : palette Okabe-Ito (cycle du style) pour les identités (actifs, stratégies) ; une seule
-teinte de bleu, du clair au foncé, pour la grandeur continue (ratio de Sharpe du nuage) ; paire divergente
+échelle viridis pour la grandeur continue (ratio de Sharpe du nuage) ; paire divergente
 bleu/rouge à milieu neutre pour les corrélations.
 """
 
@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import seaborn as sns  # noqa: E402
-from matplotlib.colors import LinearSegmentedColormap  # noqa: E402
 from matplotlib.ticker import FuncFormatter  # noqa: E402
 
 from .backtest import STRATEGY_LABELS  # noqa: E402
@@ -60,14 +59,9 @@ def save(fig, stem: Path) -> list[Path]:
     stem.parent.mkdir(parents=True, exist_ok=True)
     paths = [stem.with_suffix(".png"), stem.with_suffix(".pdf")]
     for p in paths:
-        fig.savefig(p)
+        fig.savefig(p, facecolor="white", edgecolor="white", transparent=False)
     plt.close(fig)
     return paths
-
-
-def _sharpe_cmap():
-    base = plt.get_cmap("Blues")(np.linspace(0.35, 1.0, 256))
-    return LinearSegmentedColormap.from_list("blues_truncated", base)
 
 
 def plot_cloud(
@@ -79,38 +73,101 @@ def plot_cloud(
     stem: Path,
     title: str,
     unconstrained: pd.DataFrame | None = None,
+    finquant_check: pd.DataFrame | None = None,
 ) -> list[Path]:
-    """Nuage Monte Carlo coloré par Sharpe, frontière QP, variance minimale, tangence, CML et actifs nommés."""
-    fig, ax = plt.subplots(figsize=(7.4, 4.9))
-    sc = ax.scatter(mc.vol * 100, mc.ret * 100, c=mc.sharpe, cmap=_sharpe_cmap(), s=2.5, alpha=0.55, linewidths=0, rasterized=True)
-    cbar = fig.colorbar(sc, ax=ax, pad=0.015)
-    cbar.set_label("ratio de Sharpe du portefeuille simulé")
+    """Frontière sur fond blanc, contrôle FinQuant et trois portefeuilles expliqués.
+
+    La droite de marché est limitée en longueur pour préserver la lisibilité du
+    nuage. Son prolongement au-delà de la tangence suppose un emprunt au taux rf.
+    """
+    use_style()
+    fig = plt.figure(figsize=(12, 7.4), facecolor="white")
+    ax = fig.add_axes([0.075, 0.25, 0.60, 0.59], facecolor="white")
+    side = fig.add_axes([0.73, 0.25, 0.25, 0.59], facecolor="white")
+    side.set_axis_off()
+    heading, _, subtitle = title.partition("\n")
+    fig.text(0.075, 0.95, "Le meilleur compromis entre rendement et risque", fontsize=19,
+             weight="bold", color="#152C40", va="top")
+    fig.text(0.075, 0.90, heading, fontsize=9, color="#475569", va="top")
+    sc = ax.scatter(mc.vol * 100, mc.ret * 100, c=mc.sharpe, cmap="viridis", s=3,
+                    alpha=0.32, linewidths=0, rasterized=True, zorder=2)
+    cax = fig.add_axes([0.075, 0.145, 0.28, 0.018])
+    # Une échelle opaque conserve les couleurs réelles malgré la transparence du nuage.
+    from matplotlib.cm import ScalarMappable
+    cbar = fig.colorbar(ScalarMappable(norm=sc.norm, cmap=sc.cmap), cax=cax, orientation="horizontal")
+    cbar.set_label("Ratio de Sharpe des portefeuilles simulés", fontsize=8)
+    cbar.outline.set_visible(False)
+    cbar.ax.xaxis.set_major_formatter(FR_AXIS)
+    cbar.ax.tick_params(labelsize=8, length=0)
     if unconstrained is not None:
-        ax.plot(unconstrained["vol"] * 100, unconstrained["ret"] * 100, color="#7F7F7F", ls=":", lw=1.3,
-                label="frontière sans contrainte de signe (forme fermée)")
-    ax.plot(frontier.table["vol"] * 100, frontier.table["ret"] * 100, color="black", lw=1.9, label="frontière efficiente long-only (QP)")
-    tan, mv = special["tangency"], special["min_variance"]
-    x_max = max(frontier.table["vol"].max(), asset_stats["vol"].max()) * 1.12
-    vols = np.linspace(0, x_max, 50)
-    ax.plot(vols * 100, (rf + (tan["ret"] - rf) / tan["vol"] * vols) * 100, color="#D55E00", ls="--", lw=1.2,
-            label="droite de marché des capitaux")
-    ax.scatter([mv["vol"] * 100], [mv["ret"] * 100], marker="s", s=55, color="#E69F00", edgecolor="black", zorder=6,
-               label=f"variance minimale (vol. {fr_num(mv['vol'] * 100, 1)} %)")
-    ax.scatter([tan["vol"] * 100], [tan["ret"] * 100], marker="*", s=170, color="#D55E00", edgecolor="black", zorder=7,
-               label=f"tangence (Sharpe {fr_num(tan['sharpe'])})")
-    ax.scatter([0], [rf * 100], marker="o", s=18, color="black", zorder=6)
-    ax.annotate("taux sans risque", (0, rf * 100), xytext=(4, -9), textcoords="offset points", fontsize=7)
-    ax.scatter(asset_stats["vol"] * 100, asset_stats["ret"] * 100, marker="D", s=20, color="black", zorder=6, label="actifs individuels")
-    for k, (name, row) in enumerate(asset_stats.sort_values("vol").iterrows()):
-        dy = 4 if k % 2 == 0 else -9
-        ax.annotate(str(name), (row["vol"] * 100, row["ret"] * 100), xytext=(4, dy), textcoords="offset points", fontsize=7)
+        ax.plot(unconstrained["vol"] * 100, unconstrained["ret"] * 100, color="#94A3B8", ls=":", lw=1.4,
+                label="Vente à découvert permise", zorder=3)
+    ax.plot(frontier.table["vol"] * 100, frontier.table["ret"] * 100, color="#152C40", lw=2.6,
+            label="Frontière sans vente à découvert", zorder=4)
+    if finquant_check is not None:
+        fq = finquant_check.query("kind == 'frontier'")
+        shown = fq.iloc[np.unique(np.linspace(0, len(fq) - 1, min(12, len(fq)), dtype=int))]
+        ax.scatter(shown["vol"] * 100, shown["ret"] * 100, s=27, facecolors="white",
+                   edgecolors="#007F73", linewidths=1.2, label="Recalcul FinQuant", zorder=5)
+    tan = special["tangency"]
+    has_tangency = tan["ret"] > rf and tan["vol"] > 0
+    if has_tangency:
+        vols = np.linspace(0, tan["vol"] * 1.22, 50)
+        ax.plot(vols * 100, (rf + tan["sharpe"] * vols) * 100, color="#B85E0A", ls="--", lw=1.2,
+                label="Combinaison avec le taux sans risque", zorder=3)
+    points = [("min_variance", "Risque minimal", "s", "#0072B2"),
+              ("tangency", "Meilleur ratio de Sharpe" if has_tangency else "Repli : risque minimal", "*", "#D55E00"),
+              ("equal_weight", "Répartition égale (1/N)", "o", "#8064A2")]
+    for k, (key, label, marker, color) in enumerate(points):
+        stat = special[key]
+        ax.scatter([stat["vol"] * 100], [stat["ret"] * 100], marker=marker,
+                   s=155 if marker == "*" else 65, color=color, edgecolors="white", linewidths=1.0, zorder=7)
+        y = 0.95 - k * 0.255
+        side.text(0, y, label, color=color, fontsize=11, weight="bold", va="top")
+        side.text(0, y - 0.07,
+                  f"Rendement  {fr_num(stat['ret'] * 100, 1)} %\n"
+                  f"Volatilité     {fr_num(stat['vol'] * 100, 1)} %\n"
+                  f"Sharpe        {fr_num(stat['sharpe'])}",
+                  fontsize=10, color="#334155", va="top", linespacing=1.6)
+    side.text(0, 0.14, "Contrôle indépendant", fontsize=10, weight="bold", color="#007F73", va="top")
+    if finquant_check is not None:
+        gap = fq["vol_gap_bp"].abs().max()
+        side.text(0, 0.08, f"{len(fq)} cibles recalculées avec FinQuant.\n"
+                  f"Écart maximal : {fr_num(gap, 3)} pb\nde volatilité annualisée.",
+                  fontsize=9, color="#475569", va="top", linespacing=1.5)
+    ax.scatter(asset_stats["vol"] * 100, asset_stats["ret"] * 100, marker="D", s=24,
+               color="#475569", edgecolors="white", linewidths=0.5, zorder=6)
+    ax.scatter([0], [rf * 100], s=24, color="#475569", zorder=6)
+    ax.annotate("Sans risque", (0, rf * 100), xytext=(6, -12), textcoords="offset points", fontsize=8)
+    x_max = max(frontier.table["vol"].max(), asset_stats["vol"].max()) * 1.10
     ax.set_xlim(0, x_max * 100)
-    ax.set_xlabel("volatilité annualisée (%)")
-    ax.set_ylabel("rendement espéré annualisé (%)")
-    ax.set_title(title)
-    ax.legend(loc="upper left", fontsize=7)
+    ax.margins(y=0.15)
+    ax.set_xlabel("Risque : volatilité annualisée (%)", labelpad=10)
+    ax.set_ylabel("Rendement annuel estimé sur le passé (%)", labelpad=10)
+    ax.spines[["left", "bottom"]].set_color("#CBD5E1")
+    ax.grid(color="#E8EDF2", linewidth=0.6)
+    ax.tick_params(length=0, pad=6)
+    # Place les noms après fixation des axes ; évite les chevauchements, notamment XBB/XCB.
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    boxes = []
+    for k, (name, row) in enumerate(asset_stats.sort_values("vol").iterrows()):
+        label = ax.annotate(str(name).removesuffix(".TO"), (row["vol"] * 100, row["ret"] * 100),
+                            xytext=(5, 6), textcoords="offset points", fontsize=8, color="#334155",
+                            bbox={"facecolor": "white", "alpha": 0.85, "edgecolor": "none", "pad": 0.5})
+        offsets = [6, -11, 19, -24, 32, -37] if k % 2 == 0 else [-11, 6, -24, 19, -37, 32]
+        for dy in offsets:
+            label.set_position((5, dy))
+            box = label.get_window_extent(renderer).expanded(1.15, 1.3)
+            if not any(box.overlaps(other) for other in boxes):
+                break
+        boxes.append(box)
     fr_axes(ax)
-    cbar.ax.yaxis.set_major_formatter(FR_AXIS)
+    fig.legend(*ax.get_legend_handles_labels(), loc="upper left", bbox_to_anchor=(0.39, 0.177),
+               fontsize=7.5, ncol=1, handlelength=2.7)
+    fig.text(0.075, 0.035, f"{subtitle} · Losanges : fonds individuels.\n"
+             "Estimation historique, pas une prévision. Au-delà de l’étoile, la droite suppose un emprunt au taux sans risque.",
+             fontsize=8, color="#64748B", va="bottom", linespacing=1.6)
     return save(fig, stem)
 
 
@@ -275,7 +332,8 @@ def plotly_cloud(
                              text=list(asset_stats.index), textposition="top center", textfont=dict(size=9),
                              marker=dict(symbol="diamond", size=8, color="black")))
     fig.update_layout(title=title, xaxis_title="volatilité annualisée (%)", yaxis_title="rendement espéré annualisé (%)",
-                      template="simple_white", legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.7)"), width=950, height=600)
+                      template="simple_white", paper_bgcolor="white", plot_bgcolor="white",
+                      legend=dict(orientation="h", y=-0.22, x=0), margin=dict(b=145), width=1100, height=740)
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.write_html(str(path), include_plotlyjs="cdn")
     return path

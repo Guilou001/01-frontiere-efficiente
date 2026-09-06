@@ -11,6 +11,7 @@ import pandas as pd
 from . import plots
 from .backtest import STRATEGIES, metrics_table, walk_forward
 from .estimation import ESTIMATORS, estimate_moments
+from .finquant_bridge import compare_finquant
 from .frontier import (
     WEIGHT_PREFIX,
     closed_form_frontier,
@@ -70,6 +71,8 @@ def run_pipeline(
     fr.table["vol_unconstrained"] = np.sqrt(np.einsum("ij,jk,ik->i", w_unc, m.cov.values, w_unc))
     fr.table.to_csv(out_tables / f"frontier_{tag}.csv", index=False, float_format="%.6f")
     unconstrained = pd.DataFrame({"ret": fr.table["target_return"], "vol": fr.table["vol_unconstrained"]})
+    finquant_check = compare_finquant(m.mu, m.cov, rf_a, fr)
+    finquant_check.to_csv(out_tables / f"finquant_check_{tag}.csv", index=False, float_format="%.10f")
 
     # 3. portefeuilles remarquables
     weights = {
@@ -109,6 +112,13 @@ def run_pipeline(
     oos_returns = pd.concat({est: bt.returns_net for est, bt in backtests.items()}, axis=1)
     oos_returns.columns = [f"{s}__{est}" for est, s in oos_returns.columns]
     oos_returns.to_csv(out_tables / "oos_returns.csv", float_format="%.6f")
+    # Entrées de l'inférence conservées sans l'arrondi à six décimales des tables historiques.
+    inference_inputs = pd.DataFrame({
+        **{f"max_sharpe__{est}": bt.returns_net["max_sharpe"] for est, bt in backtests.items()},
+        "equal_weight": backtests["sample"].returns_net["equal_weight"],
+        "rf": backtests["sample"].rf,
+    })
+    inference_inputs.to_csv(out_tables / "oos_inference_inputs.csv", index_label="date", float_format="%.17g")
 
     # 7. figures
     figs: dict[str, list[str]] = {}
@@ -117,7 +127,7 @@ def run_pipeline(
         figs[f"cloud_{s}"] = [str(p) for p in plots.plot_cloud(
             mc, fr, special, asset_stats, rf_a, out_figures / f"cloud_{s}_{tag}",
             title=f"{title_base}\n{n_sim_txt} portefeuilles aléatoires, {plots.SAMPLING_LABELS[s]}",
-            unconstrained=unconstrained)]
+            unconstrained=unconstrained, finquant_check=finquant_check)]
     figs["transition_map"] = [str(p) for p in plots.plot_transition_map(
         fr, out_figures / f"transition_map_{tag}", title=f"Carte de transition de la frontière long-only\n{title_base}",
         markers={"var. min.": special["min_variance"]["vol"], "tangence": special["tangency"]["vol"]})]

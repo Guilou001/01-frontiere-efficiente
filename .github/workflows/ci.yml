@@ -21,3 +21,7 @@ jobs:
         run: uv run pytest
       - name: CLI demo (synthetic data, no network)
         run: uv run efficient-frontier demo --n-sim 5000 --n-boot 20
+      - name: Reproduce paired block intervals (published derived returns, no network)
+        run: |
+          uv run python scripts/sharpe_uncertainty.py
+          git diff --exit-code -- results/tables/us/oos_sharpe_uncertainty.csv results/tables/canada/oos_sharpe_uncertainty.csv results/tables/sharpe_uncertainty_manifest.json

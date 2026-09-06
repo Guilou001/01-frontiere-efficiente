@@ -1,0 +1,15 @@
+{
+  "n_boot": 20000,
+  "seed": 123,
+  "block_months": [
+    3,
+    6,
+    12
+  ],
+  "confidence": 0.95,
+  "method": "paired_circular_percentile",
+  "input_sha256": {
+    "us": "f5c8839e9599160d8e13d3a2572d5348f2bee02cf583481cf298abac2924c91b",
+    "canada": "d6816d9c9467464994da57f4ec925e2470eadd5ca76cfb90b29e93f5b848f14d"
+  }
+}

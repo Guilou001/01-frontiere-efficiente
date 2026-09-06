@@ -22,10 +22,14 @@ dependencies = [
   "yfinance==1.6.0",
   "pyarrow==25.0.1",
   "requests==2.34.2",
+  "finquant==0.7.0",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest==9.1.1", "ruff==0.16.4"]
+rapport = [
+    "gvf",
+]
 
 [project.scripts]
 efficient-frontier = "efficient_frontier.cli:main"
@@ -44,3 +48,6 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP"]
 ignore = ["E501", "B008"]
+
+[tool.uv.sources]
+gvf = { git = "https://github.com/Guilou001/gv-fintools", rev = "v0.4.1" }
